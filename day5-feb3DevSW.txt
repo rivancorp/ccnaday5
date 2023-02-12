@@ -1,0 +1,326 @@
+Day5: Meron retrenteched/ Hire:
+BPI: inHouse->HP:8 -?40 Network -> 1IT
+Programming/coding.
+TASK1: Cisco IOS vs Cisco Linux IOS:
+device: controlPlane,dataplane,Management.
+
+git clone https://github.com/rivancorp/ccna
+
+TASK2: CCNA: ROUTING AND SWITCHING.
+"Jail Break"
+Delete all OLD commands:
+flash_init
+delete flash:vlan.dat
+delete flash:config.text
+boot
+
+KeepALLCommands:
+flash_init
+rename flash:config.text  flash:config.backup
+boot
+^c
+enable
+copy flash:config.backup run
+
+TASK3: basic CoreSWitchConfig:
+!@@@LeafSwitchONLY
+config t
+   hostname CORETAAS12
+   enable secret pass
+   service password-encryption
+   no logging console
+   no ip domain-lookup
+   line console 0
+     password pass
+     login
+     exec-timeout 0 0
+    line vty 0 14
+      password pass
+      login
+      exec-timeout 0 0
+   Int Vlan 1
+     no shutdown
+	 ip add 10.12.1.2 255.255.255.0
+	 description MGMTDATA
+   Int Vlan 10
+     no shutdown
+	 ip add 10.12.10.2 255.255.255.0
+	 description WIRELESS
+   Int Vlan 100
+     no shutdown
+	 ip add 10.12.100.2 255.255.255.0
+	 description VOICEVLAN
+
+TASK4: HOW TO BE SWITCHING EXPERT network Engineer:
+Basa Book 1200 Pages:
+or
+Learn the 5 super heroes of Switching
+Q 802.1Q = trunkingProtocol, "brings 2 switches together!"
+D 802.1D = spanning-treeprotocolDarna:protect the Switch,slowly,kind
+W 802.1w = RapidSTP, WW: BrutallyProtechTheSW:
+S 802.1s = MultipleInstallSTP: ProtectManySW sabay sabay
+X 8021.x = PortBasedAuthen: 
+
+Trunk Ports: switch to switch:
+TAAS/BABA:
+config t
+Int Range fa0/10-12
+ switchport trunk Encap Dot1Q
+ switchport mode trunk
+ do sh int trunk
+Dot1q = Qupid,mave switches love each other:
+      IEEE standard where SW will from Layer 2 trunks
+how to get fired:
+BABA:
+config t
+ spanning-tree vlan 1
+end
+
+TAAS:
+config t
+ spanning-tree vlan 1
+end
+
+TASK5: MASTERING STP:
+Always Make the MOST expensive/powerswitches:
+the RootBridge and SecondBridge:
+
+TAAS:/d1       32786 --> 24576
+Config t
+spanning-tree mode pvst
+spanning-tree vlan 1-100 root Primary
+spanning-tree vlan 1-100 priority 1
+do sh spanning-tree vlan 1
+BABA:/d2
+Config t              32768->   28672
+spanning-tree mode pvst
+spanning-tree vlan 1-100 root Secondary
+spanning-tree vlan 1-100 priority 2
+do sh spanning-tree vlan 1
+
+TASK6: STP OR 802.1D FUNDAMENTALS:
+STP Timers:
+fd = 15s x 2 = 30s Buhay na Port/lalabas in 30s
+he = 2 seconds
+
+STP PORT STATUS:
+blk - listen - lrn - fwd
+
+kabit sa sarili = blk.
+
+TASK7: Rapid Spanning-tree Protocol: 802.1w
+
+TAAS: RootBridge
+config t
+spanning-tree Mode Rapid-pvst
+spanning-tree BackBoneFast
+spanning-tree portfast bpduguard default
+Int Range fa0/1-8
+   spanning-tree Portfast
+@BABA:
+config t
+spanning-tree Mode Rapid-pvst
+spanning-tree UplinkFast
+spanning-tree portfast bpduguard default
+Int Range fa0/1-8
+  spanning-tree Portfast
+end
+
+TASK8: Multiple instance STP: MST or 802.1s
+step1: sync all Vlans with VTP:vlanTrunkingProtocol:
+TAAS/BABA:
+config t
+vtp domain ccna
+vtp password pass
+vtp mode server
+vtp version 2
+exit
+
+step2: 
+create vlans:
+TAAS:
+config t
+vlan 11-19
+exit
+vlan 21-29
+exit
+vlan 31-39
+exit
+BABA: sh vlan brief:
+@ENABLE SUPERMAN: 802.1S
+cpu1: vlan 11-19
+cpu2: vlan 21-29
+cpu3: vlan 31-39
+@TAAs/BABA:
+CONFIG T
+spanning-tree mode Mst
+spanning-tree mst configuration
+ name supermanstp
+ revision 1
+   Instance 1 vlan 11-19
+   Instance 2 vlan 21-29
+   Instance 3 vlan 31-39
+exit
+sh spanning-tree mst configuration 
+
+TASK8: MAKE YOUR OWN SUPERMAN BOSSING:
+
+@Taas: Make Taas RootBridge again:
+config t
+spanning-tree mst 0 root primary
+spanning-tree mst 1 root secondary
+spanning-tree mst 2 root primary
+spanning-tree mst 3 root secondary
+@baba
+config t
+spanning-tree mst 0 root Secondary
+spanning-tree mst 1 root primary
+spanning-tree mst 2 root Secondary
+spanning-tree mst 3 root primary
+
+TASK9: Implementing Port-Security in Cisco
+Switch:
+baba:
+sh cdp nei
+Port-Security: Secure/Guard the MacAddress/Layer2
+device so that you canNOT replace it with hacking
+device.
+How to protect your SwitchFrom" man in the middle
+attack using Arduino!"
+Guard fa0/5 and fa0/7 so that, no Arduino can
+be connected.
+@BABA
+config t
+Int fa0/5
+switchport mode access
+switchport port-security
+switchport port-security mac-address Sticky
+switchport port-security maximum 1
+switchport port-security violation shutdown
+Int fa0/7
+switchport mode access
+switchport port-security
+switchport port-security mac-address Sticky
+switchport port-security maximum 1
+switchport port-security violation shutdown
+do sh port-security address
+   1    ccd8.c1fb.1045    SecureSticky                  Fa0/5        -
+   1    ccd8.c1fb.2325    SecureSticky
+do sh int status err-disable
+
+Bring it Back Alive:
+Int fa0/5
+NO switchport port-security
+shut
+no shut
+Int fa0/7
+NO switchport port-security
+shut
+no shut
+
+TASK10: FHRP: FIRST HOP REDUNDANCY PROTOCOL
+or "rich kid problems!" HSRP, GLBP, VRRP
+TASK16: FHRP:First Hop Redundancy Protocol:
+        " The Rich Kid Problem!"
+HSRP: host standby routing protocol: all Cisco SW
+VRRP: virtual router redundancy protocol: any brand
+GLBP: global load balancing protocol: all Cisco Router
+Companies: 2 or 3 telcos:
+@TAAS/PLDTinternet:
+config t
+Track 1 Int gi 0/1 line-protocol
+Int vlan 1
+standby 1 ip 10.M.1.6
+standby 1 preempt
+standby 1 Priority 150
+standby 1 Track 1 decrement 60
+
+@BABA
+config t
+Int vlan 1
+standby 1 ip 10.M.1.6
+standby 1 preempt
+standby 1 Priority 100
+do sh standby
+
+TASK17: LINK AGGREGATION PROTOCOL
+INVENTED by Cisco: PaGP:
+Port Aggregation Protocol = 20yrs Old/obsolete
+LACP: any brand
+link aggregation control protocol.
+
+LACP:LINK AGGREGATION CONTROL PROTOCOL = ieee
+Combinding Two/More Layer 2 links AS ONE! Unite/UNITY
+@BABA- Taas:
+config t
+Int Range fa0/10-12
+ shut
+ channel-group 1 mode active
+ channel-protocol Lacp
+ no shut
+ do sh etherchannel summary
+ do sh int po1 | inc BW
+
+ TASK18: ping time:
+ping 10.m.1.10 = pc
+ping 10.m.1.4 = swv1
+ping 10.m.100.4 = swv100
+ping 10.m.100.8 = cucm
+ping 10.m.100.101 = p1
+ping 10.m.100.102 = p2
+
+Network Engineer: DNS, WEB, NTP, FTP
+Domain Name System = ping www.nba.com
+
+TASK19:
+cmd
+powershell
+install-windowsFeature -name dns -includemanagementtools
+Forward lookup zone: 
+itsyota.com
+DNS minimum skills for trabaho:
+     itsyota.com  ->                 pogiako.com
+ns =  newHost 10.m.1.10
+____ =newhost ___ 10.m.1.10 
+www = newAlias = ns.itsyota.com
+pop = newAlias = ns.itsyota.com
+smtp = newAlias = ns.itsyota.com
+imap = newAlias = ns.itsyota.com
+MX  newMX _________ = ns.itsyota.com
+
+TASK10: HTTP OR WEB SERVER:
+CMD
+powershell
+Install-windowsFeature -name web-server -include 
+                                         managementtools
+ping www.itsyota.com
+New-Website -name "syuta1k" -hostheader "www.itsyota.com"
+                       -physicalpath "d:\WebsiteCLASS\datingbiz"
+                       -force
+New-Website -name "mePogi" -hostheader "www.pogiako.com"
+                       -physicalpath "d:\WebsiteCLASS\lawbiz"
+                       -force
+
+TASK11: FTP server: file transfer protocol:
+aka Tambakan ng basura/files ng network device.
+
+TASK12: NETWORK TIME PROTOCOL:
+Edge: ntp server:
+CONFIG T
+ntp master
+ntp source gi 0/0/0
+int gi 0/0/0
+  ntp broadcast
+
+core/taas:
+ping 10.m.m.1
+config t
+ip route 0.0.0.0  0.0.0.0  10.m.m.1
+ntp server 10.m.m.1
+
+HOW TO CAREER IN NETWORK ENGINEERING:
+1. FRENDS MATTER! = LONE WOLF -> LOW JOB.
+2. RESUME MATTER = CHATGPT to generate 2 page
+  resume based on job description.
+3. vce Plus 795 question.
+4. hOME BASED.

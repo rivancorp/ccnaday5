@@ -1,0 +1,207 @@
+@@@@@@@@ example1 @@@@@@@@@@
+We can create a EEM applet to watch for the syslog message that loopback0 has been shutdown,
+ and automagicly bring it back up!
+
+config t
+no event manager applet WatchLo1
+event manager applet WatchLo1
+ event syslog pattern "Interface Loopback1.* down" period 1
+ action 2.0 cli command "enable"
+ action 2.1 cli command "config t"
+ action 2.2 cli command "interface lo1"
+ action 2.3 cli command "no shutdown"
+ action 3.0 syslog msg "BETTER LUCK nxt time,Interface Loopback0 was brought up via EEM"
+ end
+event manager run WatchLo1
+
+
+@@@@@@@ example2 @@@@@@@@@
+
+This time we want to essentially disable reload on the router. 
+Although this would work, using AAA would be the preferred method.
+
+event manager applet DisableReload
+ event cli pattern "reload" sync no skip yes occurs 1
+ action 1.0 syslog msg "$_cli_msg has been disabled."
+
+Instead of looking for a pattern in syslog, this time we’re waiting for a
+pattern entered onto the CLI. Let’s break down the options on that event real quick
+
+-event cli pattern: Defines the event criteria to initialize the EEM applet.
+-sync:Specifies if the policy should be executed synchronously before the CLI commands executes
+-skip: Indicates if the CLI commands should be executed
+-occurs: Indicates the number of occurrences before the EEM applet is triggers.
+
+
+When we attempt to reload the router, the results are as expected:
+
+R1#reload
+R1#
+*Jun  6 12:19:55.579: %HA_EM-6-LOG: DisableReload: reload has been disabled.
+
+@@@@@@@ example3 @@@@@@@@@
+
+A user executed script that prompts you for a number of loopbacks to create.
+
+config t
+no event manager applet CreateLoopbacks
+event manager applet CreateLoopbacks
+ event none
+ action 1.0 puts "How many Loopback interfaces do you wish to create?"
+ action 1.1 puts nonewline "> "
+ action 1.2 gets num 
+ action 2.0 cli command "enable"
+ action 2.1 cli command "conf t"
+ action 3.0 set i "1"
+ action 3.1 while $i le $num
+ action 3.2  cli command "interface Loopback $i"
+ action 3.3  cli command "ip address $i.$i.$i.$i 255.255.255.255"
+ action 3.4  increment i 1
+ action 3.5 end
+ action 4.0 cli command "end"
+ end
+
+event manager run CreateLoopbacks
+
+removing loopbacks:
+config t
+no event manager applet RemoveLoopbacks
+event manager applet RemoveLoopbacks
+ event none
+ action 1.0 puts "How many Loopback interfaces do you wish to create?"
+ action 1.1 puts nonewline "> "
+ action 1.2 gets num 
+ action 2.0 cli command "enable"
+ action 2.1 cli command "conf t"
+ action 3.0 set i "1"
+ action 3.1 while $i le $num
+ action 3.2  cli command "no interface Loopback $i"
+ action 3.4  increment i 1
+ action 3.5 end
+ action 4.0 cli command "end"
+ end
+
+event manager run CreateLoopbacks
+
+@@@@@@@ example4 @@@@@@@@@
+
+event manager applet NOWRE
+event cli pattern "write erase" sync no skip yes
+
+@@@@@@@ example5 @@@@@@@@@
+
+Show a welcome message with “show my welcome” command
+
+!
+event manager applet SHOW-MY-WELCOME-COMMAND
+ event cli pattern "show my welcome" enter
+ action 1 puts "Hello!!! Welcome to digitaltut.com!!!"
+!
+
+@@@@@@@ example6 @@@@@@@@@
+
+Ex2:
+create an cisco eem script that will automatically delete the flash 
+of a cisco device and reboot when the user types the command "hostname"
+
+config t
+no event manager applet auto-delete-flash-and-reboot
+event manager applet auto-delete-flash-and-reboot
+ event cli pattern "hostname" sync no skip yes
+ action 1.0 cli command "delete /force /recursive flash:"
+ action 1.1 cli command "delete /force /recursive bootflash:"
+ action 1.2 cli command "erase startup-config"
+ action 2.0 syslog msg "Deleting flash and rebooting the device..."
+ action 3.0 reload
+
+
+To install the script, copy and paste the above configuration 
+into the device's configuration mode and then enter the following command:
+
+event manager run auto-delete-flash-and-reboot
+
+
+test:
+
+config t
+no event manager applet erase_startup_config
+event manager applet erase_startup_config
+event cli pattern "hostname" sync no skip no
+action 1.0 cli command "enable"
+action 2.0 cli command "erase startup-config"
+action 3.0 cli command "show start"
+end
+event manager run erase_startup_config
+
+create a cisco router command that will
+ send an email alert using rivancorp@gmail.com
+ and password of C1sc0123 whenever an interface shutsdown:
+ 
+event manager applet interface_down
+event syslog pattern ".*interface.*down.*"
+action 1.0 cli command "enable"
+action 2.0 cli command "tclsh"
+action 2.1 tcl sh
+namespace eval ::cisco {
+  proc send_email {to from subject body} {
+    set smtp_server "smtp.gmail.com"
+    set smtp_port 587
+    set timeout 20
+    set user "rivancorp@gmail.com"
+    set password "C1sc0123"
+    set message [join [list \
+      "set smtp [socket $smtp_server $smtp_port]" \
+      "set timeout $timeout" \
+      "expect {\"220*\" {send \"ehlo $smtp_server\\r\"; exp_continue} }" \
+      "expect {\"250*\" {send \"starttls\\r\"; exp_continue} }" \
+      "expect {\"220*\" {send \"AUTH LOGIN\\r\"; exp_continue} }" \
+      "expect {\"334*\" {send [format {%s} [base64::encode $user]]\\r; exp_continue} }" \
+      "expect {\"334*\" {send [format {%s} [base64::encode $password]]\\r; exp_continue} }" \
+      "expect {\"235*\" {send [format {mail from:<%s>\\r} $from]\\r; exp_continue} }" \
+      "expect {\"250*\" {send [format {rcpt to:<%s>\\r} $to]\\r; exp_continue} }" \
+      "expect {\"250*\" {send \"data\\r\"; exp_continue} }" \
+      "expect {\"354*\" {send [format {subject:%s\\r\\n\\r\\n%s\\r\\n.} $subject $body]\\r; exp_continue} }" \
+      "expect {\"250*\" {send \"quit\\r\"}}" \
+      "close $smtp" \
+    ] \\n]
+    eval $message
+  }
+}
+set body [exec sh run interface | in shut]
+::cisco::send_email rivancorp@gmail.com rivancorp@gmail.com "Interface Down" $body
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
